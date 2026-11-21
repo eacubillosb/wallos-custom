@@ -112,6 +112,7 @@ function restoreSessionFromRememberMeCookie($db)
     $_SESSION['username'] = $username;
     $_SESSION['token'] = $token;
     $_SESSION['loggedin'] = true;
+    $_SESSION['minibot_greet'] = true; // Dia greets once after every login.
     $_SESSION['main_currency'] = $main_currency;
     $_SESSION['userId'] = $userId;
 

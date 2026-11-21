@@ -6,6 +6,7 @@ on:
   pull_request:
     branches:
       - main
+      - Main
 permissions:
   contents: write
   pull-requests: write
@@ -16,11 +17,36 @@ env:
   REGISTRY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   REGISTRY_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
   IMAGE_NAME: ${{ vars.DOCKERHUB_TAG }}
+  # Images are pushed only when the repository has a Docker Hub target
+  # (the DOCKERHUB_TAG variable plus the DOCKERHUB_* secrets). Without it, every
+  # push still runs the tests and builds the image, and publishes nothing.
+  PUBLISH: ${{ github.event_name != 'pull_request' && vars.DOCKERHUB_TAG != '' }}
+  HAS_DISCORD: ${{ secrets.DISCORD_WEBHOOK != '' }}
   # For release-please, see available types at https://github.com/google-github-actions/release-please-action/tree/v4/?tab=readme-ov-file#release-types-supported
   PROJECT_TYPE: simple
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The suite runs inside the app's own image, so it has the same PHP
+      # extensions (intl, gd, sqlite) as production.
+      - name: Build the app image
+        run: docker build -t diamon-ci .
+      - name: PHP tests
+        run: docker run --rm --entrypoint php -v "$PWD":/var/www/html -w /var/www/html diamon-ci tests/run.php
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: JavaScript tests
+        run: |
+          for file in tests/*.test.js; do
+            node --test "$file"
+          done
+
   release:
+    needs: test
     runs-on: ubuntu-latest
     outputs:
       release_created: ${{ steps.rp.outputs.release_created }}
@@ -66,26 +92,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Log into registry ${{ env.REGISTRY }}
-        if: github.event_name != 'pull_request'
+        if: env.PUBLISH == 'true'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ env.REGISTRY_USERNAME }}
           password: ${{ env.REGISTRY_PASSWORD }}
-      - name: Login to GitHub Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-            ghcr.io/ellite/wallos
           tags: ${{ needs.release.outputs.tag_patterns }}
       # necessary for multi-platform images
       - name: Set up QEMU
@@ -102,20 +120,20 @@ jobs:
           pull: true
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          # PRs never push and never log into a registry, so don't build image
-          # refs from vars.DOCKERHUB_TAG - it is empty for fork PRs.
-          outputs: ${{ github.event_name == 'pull_request' && 'type=cacheonly' || format('type=image,"name={0}/{1},ghcr.io/ellite/wallos",push-by-digest=true,name-canonical=true,push=true', env.REGISTRY, env.IMAGE_NAME) }}
+          # Without a Docker Hub target (and on PRs) the image is built but not
+          # pushed, so image refs are never built from an empty DOCKERHUB_TAG.
+          outputs: ${{ env.PUBLISH != 'true' && 'type=cacheonly' || format('type=image,"name={0}/{1}",push-by-digest=true,name-canonical=true,push=true', env.REGISTRY, env.IMAGE_NAME) }}
           # Scope cache per platform to prevent architecture-mismatched layers
           cache-from: type=gha,scope=${{ github.workflow }}-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ github.workflow }}-${{ matrix.platform }}
       - name: Export digest
-        if: github.event_name != 'pull_request'
+        if: env.PUBLISH == 'true'
         run: |
           mkdir -p /tmp/digests
           digest="${{ steps.build.outputs.digest }}"
           touch "/tmp/digests/${digest#sha256:}"
       - name: Upload digest
-        if: github.event_name != 'pull_request'
+        if: env.PUBLISH == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: digests-${{ matrix.platform == 'linux/amd64' && 'amd64' || matrix.platform == 'linux/arm64' && 'arm64' || 'armv7' }}
@@ -126,7 +144,7 @@ jobs:
   merge:
     runs-on: ubuntu-latest
     needs: [release, build]
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && vars.DOCKERHUB_TAG != ''
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
@@ -140,12 +158,6 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ env.REGISTRY_USERNAME }}
           password: ${{ env.REGISTRY_PASSWORD }}
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Docker meta
@@ -154,7 +166,6 @@ jobs:
         with:
           images: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-            ghcr.io/ellite/wallos
           tags: ${{ needs.release.outputs.tag_patterns }}
       - name: Create manifest list and push to Docker Hub
         working-directory: /tmp/digests
@@ -162,14 +173,8 @@ jobs:
           docker buildx imagetools create \
             $(jq -cr '.tags | map(select(startswith("${{ env.REGISTRY }}")) | "-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
-      - name: Create manifest list and push to GHCR
-        working-directory: /tmp/digests
-        run: |
-          docker buildx imagetools create \
-            $(jq -cr '.tags | map(select(startswith("ghcr.io")) | "-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf 'ghcr.io/ellite/wallos@sha256:%s ' *)
       - name: Send notification to Discord
-        if: needs.release.outputs.release_created == 'true'
+        if: needs.release.outputs.release_created == 'true' && env.HAS_DISCORD == 'true'
         uses: Ilshidur/action-discord@d2594079a10f1d6739ee50a2471f0ca57418b554 # v0.4.0 (pin @master to a full commit SHA)
         with:
           args: "A new release has been created: ${{ steps.meta.outputs.version }}"

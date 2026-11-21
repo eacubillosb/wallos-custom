@@ -52,6 +52,7 @@ const staticAssets = [
     'scripts/common.js',
     'scripts/header-theme.js',
     'scripts/header-notifications.js',
+    'scripts/minibot-format.js',
     'scripts/minibot.js',
     'scripts/dashboard.js',
     'scripts/price-input.js',

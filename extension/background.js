@@ -40,8 +40,10 @@ async function refreshWatchlist(force) {
   if (!force && watchlistAt && Date.now() - watchlistAt < WATCHLIST_TTL_MS) {
     return;
   }
-  const url = diamonUrl.replace(/\/$/, '') + '/api/usage/get_watchlist.php?api_key=' + encodeURIComponent(apiKey);
-  const response = await fetch(url);
+  // The key goes in a header, not the URL, so it stays out of server logs.
+  const response = await fetch(diamonUrl.replace(/\/$/, '') + '/api/usage/get_watchlist.php', {
+    headers: { 'X-API-Key': apiKey },
+  });
   const data = await response.json();
   if (data.success) {
     watchlist = data.subscriptions || [];
@@ -185,8 +187,9 @@ async function refreshPendingCancellations() {
     pendingCancellations = [];
     return;
   }
-  const url = diamonUrl.replace(/\/$/, '') + '/api/cancellations/get_pending.php?api_key=' + encodeURIComponent(apiKey);
-  const response = await fetch(url);
+  const response = await fetch(diamonUrl.replace(/\/$/, '') + '/api/cancellations/get_pending.php', {
+    headers: { 'X-API-Key': apiKey },
+  });
   const data = await response.json();
   if (data.success) {
     pendingCancellations = data.cancellations || [];

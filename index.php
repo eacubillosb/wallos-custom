@@ -8,21 +8,8 @@ require_once 'includes/upcoming_cancellations.php';
 
 function formatPrice($price, $currencyCode, $currencies)
 {
-    $formattedPrice = CurrencyFormatter::format($price, $currencyCode);
-    if (strstr($formattedPrice, $currencyCode)) {
-        $symbol = $currencyCode;
-
-        foreach ($currencies as $currency) {
-
-            if ($currency['code'] === $currencyCode) {
-                if ($currency['symbol'] != "") {
-                    $symbol = $currency['symbol'];
-                }
-                break;
-            }
-        }
-        $formattedPrice = str_replace($currencyCode, $symbol, $formattedPrice);
-    }
+    // "COP 30,000" everywhere: the code leads, like the subscription list.
+    $formattedPrice = CurrencyFormatter::formatCodeFirst($price, $currencyCode);
 
     return $formattedPrice;
 }

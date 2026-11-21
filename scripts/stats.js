@@ -10,12 +10,24 @@ function _chartTheme() {
     return { main, text, border, dark, font };
 }
 
+// "COP 30,000": the ISO code first, digits in the browser's locale, like
+// CurrencyFormatter::formatCodeFirst() on the server.
+function formatCodeFirst(value, currency) {
+    const parts = new Intl.NumberFormat(navigator.language, { style: 'currency', currency, currencyDisplay: 'code' })
+        .formatToParts(Math.abs(value));
+    const digits = parts
+        .filter(part => part.type !== 'currency' && part.type !== 'literal')
+        .map(part => part.value)
+        .join('');
+    return currency + '\u00A0' + (value < 0 ? '-' : '') + digits;
+}
+
 function loadGraph(container, dataPoints, currency, run) {
     if (!run) return;
 
     const t = _chartTheme();
     const fmt = val => currency
-        ? new Intl.NumberFormat(navigator.language, { style: 'currency', currency }).format(val)
+        ? formatCodeFirst(val, currency)
         : new Intl.NumberFormat(navigator.language).format(val);
 
     const hidden = new Array(dataPoints.length).fill(false);
@@ -75,7 +87,7 @@ function loadLineGraph(container, dataPoints, currency, run) {
 
     const t = _chartTheme();
     const fmt = val => currency
-        ? new Intl.NumberFormat(navigator.language, { style: 'currency', currency }).format(val)
+        ? formatCodeFirst(val, currency)
         : new Intl.NumberFormat(navigator.language).format(val);
 
     // Mark the 12-month high and low so the extremes read at a glance
@@ -142,7 +154,7 @@ function loadBarGraph(container, dataPoints, currency, run, thresholdLine) {
     const cs = getComputedStyle(document.documentElement);
     const errorColor = cs.getPropertyValue('--error-color').trim() || '#EF4444';
     const fmt = val => currency
-        ? new Intl.NumberFormat(navigator.language, { style: 'currency', currency }).format(val)
+        ? formatCodeFirst(val, currency)
         : new Intl.NumberFormat(navigator.language).format(val);
 
     const annotations = {};
@@ -210,7 +222,7 @@ function loadHorizontalBarGraph(container, dataPoints, currency, run) {
 
     const t = _chartTheme();
     const fmt = val => currency
-        ? new Intl.NumberFormat(navigator.language, { style: 'currency', currency }).format(val)
+        ? formatCodeFirst(val, currency)
         : new Intl.NumberFormat(navigator.language).format(val);
 
     const chart = new ApexCharts(document.getElementById(container), {

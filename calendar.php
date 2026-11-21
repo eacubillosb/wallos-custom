@@ -14,10 +14,7 @@ function formatCalendarPrice($price, $currencyId, $currencies)
   }
 
   $currency = $currencies[$currencyId];
-  $formattedPrice = CurrencyFormatter::format($price, $currency['code']);
-  if ($currency['symbol'] != "" && strstr($formattedPrice, $currency['code'])) {
-    $formattedPrice = str_replace($currency['code'], $currency['symbol'], $formattedPrice);
-  }
+  $formattedPrice = CurrencyFormatter::formatCodeFirst($price, $currency['code']);
 
   return $formattedPrice;
 }
@@ -321,7 +318,7 @@ if ($weekStartsSunday) {
     <?php
       if ($budget > 0 && $totalCostThisMonth > $budget) {
         $overBudgetAmount = $totalCostThisMonth - $budget;
-        $overBudgetAmount = CurrencyFormatter::format($overBudgetAmount, $code);
+        $overBudgetAmount = CurrencyFormatter::formatCodeFirst($overBudgetAmount, $code);
         ?>
           <div class="over-budget">
             <i class="fa-solid fa-triangle-exclamation"></i>
@@ -342,11 +339,11 @@ if ($weekStartsSunday) {
           <div class="title"><?= translate("active_subscriptions", $i18n) ?></div>
         </div>
         <div class="statistic">
-          <span><?= CurrencyFormatter::format($totalCostThisMonth, $code) ?></span>
+          <span><?= CurrencyFormatter::formatCodeFirst($totalCostThisMonth, $code) ?></span>
           <div class="title"><?= translate("total_cost", $i18n) ?></div>
         </div>
         <div class="statistic">
-          <span><?= CurrencyFormatter::format($amountDueThisMonth, $code) ?></span>
+          <span><?= CurrencyFormatter::formatCodeFirst($amountDueThisMonth, $code) ?></span>
           <div class="title"><?= translate("amount_due", $i18n) ?></div>
         </div>
       </div>

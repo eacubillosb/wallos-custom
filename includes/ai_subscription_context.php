@@ -199,3 +199,58 @@ function ai_subscription_cost_context(array $subscriptions, array $currencies, $
     ];
 }
 
+
+
+// The currency's everyday name in the user's language, from ICU's data:
+// "pesos colombianos" for COP in Spanish, "US dollars" for USD in English.
+// Falls back to the ISO code when the intl extension or the name is missing.
+function ai_currency_name($currencyCode, $language)
+{
+    $currencyCode = strtoupper(trim((string) $currencyCode));
+    $names = ['singular' => $currencyCode, 'plural' => $currencyCode];
+    if ($currencyCode === '' || !class_exists('ResourceBundle')) {
+        return $names;
+    }
+
+    // Diamon's language keys look like "pt_br" or "zh_cn"; ICU wants "pt_BR".
+    $parts = explode('_', str_replace('-', '_', (string) $language), 2);
+    $locale = strtolower($parts[0]) . (isset($parts[1]) ? '_' . strtoupper($parts[1]) : '');
+    $bundle = @ResourceBundle::create($locale, 'ICUDATA-curr');
+    if (!$bundle) {
+        return $names;
+    }
+
+    $currencies = $bundle['Currencies'];
+    $singular = $currencies && $currencies[$currencyCode] ? $currencies[$currencyCode][1] : null;
+    $plurals = $bundle['CurrencyPlurals'];
+    $plural = $plurals && $plurals[$currencyCode] ? $plurals[$currencyCode]['other'] : null;
+
+    if (is_string($singular) && $singular !== '') {
+        $names['singular'] = $singular;
+        $names['plural'] = $singular;
+    }
+    if (is_string($plural) && $plural !== '') {
+        $names['plural'] = $plural;
+    }
+
+    return $names;
+}
+
+// Safety net for the chat reply: the model is told to name the currency, but
+// if it still writes the ISO code ("COP 30.000", "30.000 COP", "en COP"), turn
+// it into "30.000 pesos colombianos". Other text is left alone.
+function ai_reply_with_currency_name($reply, $currencyCode, $currencyName)
+{
+    $currencyCode = strtoupper(trim((string) $currencyCode));
+    $currencyName = trim((string) $currencyName);
+    if ($currencyCode === '' || $currencyName === '' || $currencyName === $currencyCode) {
+        return (string) $reply;
+    }
+
+    $code = preg_quote($currencyCode, '/');
+    $amount = '-?\d[\d.,\x{00A0}\x{202F}\']*\d|-?\d';
+    $reply = preg_replace('/\b' . $code . '[\s\x{00A0}]?(' . $amount . ')/u', '$1 ' . $currencyName, (string) $reply);
+    $reply = preg_replace('/(' . $amount . ')[\s\x{00A0}]?' . $code . '\b/u', '$1 ' . $currencyName, $reply);
+
+    return preg_replace('/\b' . $code . '\b/u', $currencyName, $reply);
+}

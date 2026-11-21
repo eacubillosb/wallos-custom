@@ -5635,6 +5635,29 @@ body.details-open {
   color: var(--text-color);
 }
 
+.diamon-minibot-bubble.rich {
+  white-space: normal;
+}
+
+.diamon-minibot-bubble.rich p,
+.diamon-minibot-bubble.rich ul,
+.diamon-minibot-bubble.rich ol {
+  margin: 0;
+}
+
+.diamon-minibot-bubble.rich > * + * {
+  margin-top: 6px;
+}
+
+.diamon-minibot-bubble.rich ul,
+.diamon-minibot-bubble.rich ol {
+  padding-left: 18px;
+}
+
+.diamon-minibot-bubble.rich li + li {
+  margin-top: 2px;
+}
+
 .diamon-minibot-bubble.thinking {
   color: var(--text-muted);
   font-style: italic;

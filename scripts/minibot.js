@@ -16,7 +16,6 @@
   const aiReady = root.dataset.aiReady === "1";
   const userKey = root.dataset.userId || "0";
   const storageKey = "diamon-minibot-" + userKey;
-  const greetedKey = "diamon-minibot-greeted-" + userKey;
   const maxStored = 12;
   const reducedMotion = window.matchMedia
     ? window.matchMedia("(prefers-reduced-motion: reduce)")
@@ -75,11 +74,54 @@
     return avatar;
   }
 
+  function appendSegments(parent, segments) {
+    segments.forEach((segment) => {
+      const node = segment.bold ? document.createElement("strong") : document.createTextNode(segment.text);
+      if (segment.bold) {
+        node.textContent = segment.text;
+      }
+      parent.appendChild(node);
+    });
+  }
+
+  // **bold** and simple lists from minibot-format.js, built with textContent only.
+  function renderRichText(bubble, text) {
+    if (typeof parseMinibotReply !== "function") {
+      bubble.textContent = text;
+      return;
+    }
+    bubble.classList.add("rich");
+    parseMinibotReply(text).forEach((block) => {
+      if (block.type === "p") {
+        const paragraph = document.createElement("p");
+        block.lines.forEach((segments, index) => {
+          if (index > 0) {
+            paragraph.appendChild(document.createElement("br"));
+          }
+          appendSegments(paragraph, segments);
+        });
+        bubble.appendChild(paragraph);
+        return;
+      }
+      const list = document.createElement(block.type);
+      block.items.forEach((segments) => {
+        const item = document.createElement("li");
+        appendSegments(item, segments);
+        list.appendChild(item);
+      });
+      bubble.appendChild(list);
+    });
+  }
+
   // Assistant messages sit beside a small Dia; user messages stand alone.
   function appendBubble(role, text, extraClass, mood) {
     const bubble = document.createElement("div");
     bubble.className = "diamon-minibot-bubble " + role + (extraClass ? " " + extraClass : "");
-    bubble.textContent = text;
+    if (role === "assistant" && !extraClass) {
+      renderRichText(bubble, text);
+    } else {
+      bubble.textContent = text;
+    }
 
     let node = bubble;
     if (role === "assistant") {
@@ -226,17 +268,11 @@
     });
   }
 
-  // A short greeting, once per browser session, while nothing has been asked yet.
+  // A short greeting on the first page after every login. The server sets
+  // data-greet only on that page, so a reload or later page stays quiet.
   if (greeting) {
     greeting.addEventListener("click", () => setOpen(true));
-    let alreadyGreeted = false;
-    try {
-      alreadyGreeted = sessionStorage.getItem(greetedKey) === "1";
-      sessionStorage.setItem(greetedKey, "1");
-    } catch (error) {
-      alreadyGreeted = true;
-    }
-    if (!alreadyGreeted && loadHistory().length === 0) {
+    if (root.dataset.greet === "1") {
       setTimeout(() => {
         if (panel.hidden) {
           greeting.hidden = false;
@@ -295,7 +331,7 @@
       },
       body: JSON.stringify({
         message: text,
-        history: history.slice(0, -1).slice(-6),
+        history: history.slice(0, -1).slice(-8),
       }),
     })
       .then((response) => response.json())

@@ -1417,6 +1417,7 @@ $upcomingPaymentsLimit = normalize_upcoming_payments_limit($settings['upcoming_p
             </div>
             <div class="settings-notes">
                 <p><i class="fa-solid fa-circle-info"></i><?= translate('ai_recommendations_info', $i18n) ?></p>
+                <p><i class="fa-solid fa-shield-halved"></i><?= translate('ai_privacy_notice', $i18n) ?></p>
                 <p><i class="fa-solid fa-circle-info"></i><?= translate('may_take_time', $i18n) ?></p>
                 <p><i
                         class="fa-solid fa-circle-info"></i><?= translate('recommendations_visible_on_dashboard', $i18n) ?>

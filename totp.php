@@ -192,6 +192,7 @@ if (isset($_POST['one-time-code'])) {
         session_regenerate_id(true);
         $_SESSION['username'] = $user['username'];
         $_SESSION['loggedin'] = true;
+        $_SESSION['minibot_greet'] = true; // Dia greets once after every login.
         $_SESSION['main_currency'] = $user['main_currency'];
         $_SESSION['userId'] = $user['id'];
 

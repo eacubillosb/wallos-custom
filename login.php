@@ -63,6 +63,7 @@ if ($adminRow['login_disabled'] == 1) {
         session_regenerate_id(true);
         $_SESSION['username'] = $username;
         $_SESSION['loggedin'] = true;
+        $_SESSION['minibot_greet'] = true; // Dia greets once after every login.
         $_SESSION['main_currency'] = $main_currency;
         $_SESSION['userId'] = $userId;
         setcookie('language', $language, [
@@ -229,6 +230,7 @@ if (isset($_POST['username']) && isset($_POST['password']) && $password_login_di
                 session_regenerate_id(true);
                 $_SESSION['username'] = $username;
                 $_SESSION['loggedin'] = true;
+                $_SESSION['minibot_greet'] = true; // Dia greets once after every login.
                 $_SESSION['main_currency'] = $main_currency;
                 $_SESSION['userId'] = $userId;
                 setcookie('language', $language, [

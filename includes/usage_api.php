@@ -13,7 +13,11 @@ function usage_api_user($db)
             $payload = $decoded;
         }
     }
-    $apiKey = $payload['api_key'] ?? $payload['apiKey'] ?? $_REQUEST['api_key'] ?? $_REQUEST['apiKey'] ?? null;
+    // Preferred: the X-API-Key header or the JSON body, which stay out of
+    // access logs. The query string still works for extension versions
+    // before 1.5.0 and for scripts written against them.
+    $apiKey = $_SERVER['HTTP_X_API_KEY'] ?? $payload['api_key'] ?? $payload['apiKey']
+        ?? $_REQUEST['api_key'] ?? $_REQUEST['apiKey'] ?? null;
     if (!$apiKey) {
         return [null, $payload, ['success' => false, 'title' => 'Missing parameters']];
     }

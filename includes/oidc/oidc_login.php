@@ -12,6 +12,7 @@ $main_currency = $userData['main_currency'];
 session_regenerate_id(true);
 $_SESSION['username'] = $username;
 $_SESSION['loggedin'] = true;
+$_SESSION['minibot_greet'] = true; // Dia greets once after every login.
 $_SESSION['main_currency'] = $main_currency;
 $_SESSION['userId'] = $userId;
 $_SESSION['from_oidc'] = true; // Indicate this session is from OIDC login

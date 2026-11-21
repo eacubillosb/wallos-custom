@@ -151,25 +151,9 @@ function sortSubscriptionsByPrice(&$print, $disabledToBottom)
     });
 }
 
-function formatPrice($price, $currencyCode, $currencies)
+function formatPrice($price, $currencyCode)
 {
-    $formattedPrice = CurrencyFormatter::format($price, $currencyCode);
-    if (strstr($formattedPrice, $currencyCode)) {
-        $symbol = $currencyCode;
-        
-        foreach ($currencies as $currency) {
-
-            if ($currency['code'] === $currencyCode) {
-                if ($currency['symbol'] != "") {
-                    $symbol = $currency['symbol'];
-                }
-                break;
-            }
-        }
-        $formattedPrice = str_replace($currencyCode, $symbol, $formattedPrice);
-    }
-
-    return $formattedPrice;
+    return CurrencyFormatter::formatCodeFirst($price, $currencyCode);
 }
 
 function formatDate($date, $lang = 'en')
@@ -375,12 +359,12 @@ function printSubscriptions($subscriptions, $sort, $categories, $members, $i18n,
                     </span>
                     <span class="price">
                         <span class="value">
-                            <?= formatPrice($subscription['price'], $subscription['currency_code'], $currencies) ?>
+                            <?= formatPrice($subscription['price'], $subscription['currency_code']) ?>
                             <?php
                             if (isset($subscription['original_price']) && $subscription['original_price'] != $subscription['price']) {
                                 ?>
                                 <span
-                                    class="original_price">(<?= formatPrice($subscription['original_price'], $subscription['original_currency_code'], $currencies) ?>)</span>
+                                    class="original_price">(<?= formatPrice($subscription['original_price'], $subscription['original_currency_code']) ?>)</span>
                                 <?php
                             }
                             ?>

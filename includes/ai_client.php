@@ -193,7 +193,75 @@ function ai_decode_provider_response($reply)
   Returns ["success" => true, "content" => string]
   or      ["success" => false, "message" => string].
 */
-function ai_complete($aiSettings, $prompt, $db, $i18n, $userId)
+/*
+  A prompt is either one string (sent as a single user message) or a list of
+  ['role' => 'system'|'user'|'assistant', 'content' => '...'] messages.
+  Unknown roles become 'user' and empty messages are dropped.
+*/
+function ai_normalize_messages($prompt)
+{
+    if (!is_array($prompt)) {
+        return [['role' => 'user', 'content' => (string) $prompt]];
+    }
+
+    $messages = [];
+    foreach ($prompt as $message) {
+        if (!is_array($message)) {
+            continue;
+        }
+        $role = in_array($message['role'] ?? '', ['system', 'user', 'assistant'], true) ? $message['role'] : 'user';
+        $content = (string) ($message['content'] ?? '');
+        if ($content !== '') {
+            $messages[] = ['role' => $role, 'content' => $content];
+        }
+    }
+
+    return $messages;
+}
+
+/*
+  The JSON body each provider expects. Plain-string prompts keep the shapes
+  Diamon always sent; message lists use each provider's chat format, where
+  Gemini takes the system text apart and calls the assistant "model".
+*/
+function ai_provider_payload($type, $model, array $messages, $useChatApi = true)
+{
+    if ($type === 'gemini') {
+        $system = [];
+        $contents = [];
+        foreach ($messages as $message) {
+            if ($message['role'] === 'system') {
+                $system[] = $message['content'];
+                continue;
+            }
+            $contents[] = [
+                'role' => $message['role'] === 'assistant' ? 'model' : 'user',
+                'parts' => [['text' => $message['content']]],
+            ];
+        }
+        $payload = ['contents' => $contents];
+        if ($system) {
+            $payload['systemInstruction'] = ['parts' => [['text' => implode("\n\n", $system)]]];
+        }
+        return $payload;
+    }
+
+    if ($type === 'ollama') {
+        if (!$useChatApi) {
+            return ['model' => $model, 'prompt' => $messages[0]['content'] ?? '', 'stream' => false];
+        }
+        return ['model' => $model, 'messages' => $messages, 'stream' => false];
+    }
+
+    $payload = ['model' => $model, 'messages' => $messages];
+    if ($type === 'openai-compatible') {
+        $payload['stream'] = false;
+    }
+
+    return $payload;
+}
+
+function ai_complete($aiSettings, $prompt, $db, $i18n, $userId, array $options = [])
 {
     $type = $aiSettings['type'] ?? '';
     $enabled = !empty($aiSettings['enabled']);
@@ -233,71 +301,44 @@ function ai_complete($aiSettings, $prompt, $db, $i18n, $userId)
         }
     }
 
+    $messages = ai_normalize_messages($prompt);
+    $useChatApi = is_array($prompt);
+    $payload = ai_provider_payload($type, $model, $messages, $useChatApi);
+
     $ch = curl_init();
+    $headers = ['Content-Type: application/json'];
 
     if ($type === 'ollama') {
-        curl_setopt($ch, CURLOPT_URL, rtrim($host, '/') . '/api/generate');
-        curl_setopt($ch, CURLOPT_RESOLVE, ["{$ssrf['host']}:{$ssrf['port']}:{$ssrf['ip']}"]);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
-            'model' => $model,
-            'prompt' => $prompt,
-            'stream' => false,
-        ]));
+        curl_setopt($ch, CURLOPT_URL, rtrim($host, '/') . ($useChatApi ? '/api/chat' : '/api/generate'));
     } elseif ($type === 'openai-compatible') {
-        $headers = ['Content-Type: application/json'];
         if (!empty($apiKey)) {
             $headers[] = 'Authorization: Bearer ' . $apiKey;
         }
-
         curl_setopt($ch, CURLOPT_URL, rtrim($host, '/') . '/chat/completions');
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
-            'model' => $model,
-            'messages' => [['role' => 'user', 'content' => $prompt]],
-            'stream' => false,
-        ]));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-        if ($ssrf) {
-            curl_setopt($ch, CURLOPT_RESOLVE, ["{$ssrf['host']}:{$ssrf['port']}:{$ssrf['ip']}"]);
-        }
-    } else {
-        $headers = ['Content-Type: application/json'];
-
-        if ($type === 'chatgpt') {
-            $headers[] = 'Authorization: Bearer ' . $apiKey;
-            curl_setopt($ch, CURLOPT_URL, 'https://api.openai.com/v1/chat/completions');
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
-                'model' => $model,
-                'messages' => [['role' => 'user', 'content' => $prompt]],
-            ]));
-        } elseif ($type === 'gemini') {
-            curl_setopt(
-                $ch,
-                CURLOPT_URL,
-                'https://generativelanguage.googleapis.com/v1beta/models/' .
-                urlencode($model) . ':generateContent?key=' . urlencode($apiKey)
-            );
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
-                'contents' => [[
-                    'parts' => [['text' => $prompt]],
-                ]],
-            ]));
-        } elseif ($type === 'openrouter') {
-            $headers[] = 'Authorization: Bearer ' . $apiKey;
-            curl_setopt($ch, CURLOPT_URL, 'https://openrouter.ai/api/v1/chat/completions');
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
-                'model' => $model,
-                'messages' => [['role' => 'user', 'content' => $prompt]],
-            ]));
-        }
-
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    } elseif ($type === 'chatgpt') {
+        $headers[] = 'Authorization: Bearer ' . $apiKey;
+        curl_setopt($ch, CURLOPT_URL, 'https://api.openai.com/v1/chat/completions');
+    } elseif ($type === 'gemini') {
+        curl_setopt(
+            $ch,
+            CURLOPT_URL,
+            'https://generativelanguage.googleapis.com/v1beta/models/' .
+            urlencode($model) . ':generateContent?key=' . urlencode($apiKey)
+        );
+    } elseif ($type === 'openrouter') {
+        $headers[] = 'Authorization: Bearer ' . $apiKey;
+        curl_setopt($ch, CURLOPT_URL, 'https://openrouter.ai/api/v1/chat/completions');
     }
 
+    if ($ssrf) {
+        curl_setopt($ch, CURLOPT_RESOLVE, ["{$ssrf['host']}:{$ssrf['port']}:{$ssrf['ip']}"]);
+    }
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 300);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_TIMEOUT, max(5, (int) ($options['timeout'] ?? 300)));
 
     $reply = curl_exec($ch);
 
@@ -311,7 +352,11 @@ function ai_complete($aiSettings, $prompt, $db, $i18n, $userId)
             'http_status' => $httpCode,
         ]);
         curl_close($ch);
-        return ["success" => false, "message" => $curlError];
+        return [
+            "success" => false,
+            "message" => $curlError,
+            "timed_out" => $curlErrorNumber === CURLE_OPERATION_TIMEDOUT,
+        ];
     }
 
     curl_close($ch);
@@ -364,7 +409,7 @@ function ai_complete($aiSettings, $prompt, $db, $i18n, $userId)
         && isset($replyData['candidates'][0]['content']['parts'][0]['text'])) {
         $content = $replyData['candidates'][0]['content']['parts'][0]['text'];
     } elseif ($type === 'ollama') {
-        $content = $replyData['response'] ?? null;
+        $content = $replyData['message']['content'] ?? $replyData['response'] ?? null;
     }
 
     if ($content === null) {

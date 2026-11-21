@@ -216,29 +216,29 @@ $potentialMonthlySavings = get_upcoming_cancellations_monthly_value($upcomingCan
         <div class="title"><?= translate('active_subscriptions', $i18n) ?></div>
       </div>
       <div class="statistic">
-        <span><?= CurrencyFormatter::format($totalCostPerMonth, $code) ?></span>
+        <span><?= CurrencyFormatter::formatCodeFirst($totalCostPerMonth, $code) ?></span>
         <div class="title"><?= translate('monthly_cost', $i18n) ?></div>
       </div>
       <div class="statistic">
-        <span><?= CurrencyFormatter::format($totalCostPerYear, $code) ?></span>
+        <span><?= CurrencyFormatter::formatCodeFirst($totalCostPerYear, $code) ?></span>
         <div class="title"><?= translate('yearly_cost', $i18n) ?></div>
       </div>
       <?php
       if ($totalCostPerMonth > 0) {
         ?>
         <div class="statistic">
-          <span><?= CurrencyFormatter::format($costPerDay, $code) ?></span>
+          <span><?= CurrencyFormatter::formatCodeFirst($costPerDay, $code) ?></span>
           <div class="title"><?= translate('cost_per_day', $i18n) ?></div>
         </div>
         <?php
       }
       ?>
       <div class="statistic">
-        <span><?= CurrencyFormatter::format($averageSubscriptionCost, $code) ?></span>
+        <span><?= CurrencyFormatter::formatCodeFirst($averageSubscriptionCost, $code) ?></span>
         <div class="title"><?= translate('average_monthly', $i18n) ?></div>
       </div>
       <div class="statistic short">
-        <span><?= CurrencyFormatter::format($mostExpensiveSubscription['price'], $code) ?></span>
+        <span><?= CurrencyFormatter::formatCodeFirst($mostExpensiveSubscription['price'], $code) ?></span>
         <div class="title"><?= translate('most_expensive', $i18n) ?></div>
         <?php
         if (isset($mostExpensiveSubscription['logo']) && $mostExpensiveSubscription['logo'] != '') {
@@ -260,7 +260,7 @@ $potentialMonthlySavings = get_upcoming_cancellations_monthly_value($upcomingCan
       if ($cheapestSubscription !== null) {
         ?>
         <div class="statistic short">
-          <span><?= CurrencyFormatter::format($cheapestSubscription['price'], $code) ?></span>
+          <span><?= CurrencyFormatter::formatCodeFirst($cheapestSubscription['price'], $code) ?></span>
           <div class="title"><?= translate('cheapest_subscription', $i18n) ?></div>
           <?php
           if (!empty($cheapestSubscription['logo'])) {
@@ -282,7 +282,7 @@ $potentialMonthlySavings = get_upcoming_cancellations_monthly_value($upcomingCan
       }
       ?>
       <div class="statistic">
-        <span><?= CurrencyFormatter::format($amountDueThisMonth, $code) ?></span>
+        <span><?= CurrencyFormatter::formatCodeFirst($amountDueThisMonth, $code) ?></span>
         <div class="title"><?= translate('amount_due', $i18n) ?></div>
       </div>
       <?php
@@ -312,7 +312,7 @@ $potentialMonthlySavings = get_upcoming_cancellations_monthly_value($upcomingCan
             $momSign = $monthOverMonthDelta >= 0 ? '+' : '-';
             ?>
             <div class="statistic short">
-              <span><?= $momSign ?><?= CurrencyFormatter::format(abs($monthOverMonthDelta), $code) ?></span>
+              <span><?= $momSign ?><?= CurrencyFormatter::formatCodeFirst(abs($monthOverMonthDelta), $code) ?></span>
               <div class="title"><?= translate('vs_last_month', $i18n) ?></div>
               <?php
               if ($monthOverMonthPercentage !== null) {
@@ -327,7 +327,7 @@ $potentialMonthlySavings = get_upcoming_cancellations_monthly_value($upcomingCan
           if ($showProjectionGraph && $heaviestMonth !== null) {
             ?>
             <div class="statistic short">
-              <span><?= CurrencyFormatter::format($heaviestMonth['total'], $code) ?></span>
+              <span><?= CurrencyFormatter::formatCodeFirst($heaviestMonth['total'], $code) ?></span>
               <div class="title"><?= translate('heaviest_month', $i18n) ?></div>
               <div class="subtitle capitalize"><?= $heaviestMonth['label'] ?></div>
             </div>
@@ -392,14 +392,14 @@ $potentialMonthlySavings = get_upcoming_cancellations_monthly_value($upcomingCan
             <div class="title"><?= translate('monthly_budget', $i18n) ?> - <?= translate('percentage_budget_used', $i18n) ?></div>
           </div>
           <div class="statistic">
-            <span><?= CurrencyFormatter::format($monthlyBudgetLeft, $code) ?></span>
+            <span><?= CurrencyFormatter::formatCodeFirst($monthlyBudgetLeft, $code) ?></span>
             <div class="title"><?= translate('monthly_budget', $i18n) ?> - <?= translate('budget_remaining', $i18n) ?></div>
           </div>
           <?php
           if (isset($monthlyOverBudgetAmount)) {
             ?>
             <div class="statistic">
-              <span><?= CurrencyFormatter::format($monthlyOverBudgetAmount, $code) ?></span>
+              <span><?= CurrencyFormatter::formatCodeFirst($monthlyOverBudgetAmount, $code) ?></span>
               <div class="title"><?= translate('monthly_budget', $i18n) ?> - <?= translate('amount_over_budget', $i18n) ?></div>
             </div>
             <?php
@@ -410,7 +410,7 @@ $potentialMonthlySavings = get_upcoming_cancellations_monthly_value($upcomingCan
           $periodRangeLabel = htmlspecialchars($budgetPeriodLabel, ENT_QUOTES, 'UTF-8');
           ?>
           <div class="statistic">
-            <span><?= CurrencyFormatter::format($amountNeededThisPeriod, $code) ?></span>
+            <span><?= CurrencyFormatter::formatCodeFirst($amountNeededThisPeriod, $code) ?></span>
             <div class="title"><?= translate('amount_needed_this_period', $i18n) ?></div>
             <div class="period-range"><?= $periodRangeLabel ?></div>
           </div>
@@ -420,7 +420,7 @@ $potentialMonthlySavings = get_upcoming_cancellations_monthly_value($upcomingCan
             <div class="period-range"><?= $periodRangeLabel ?></div>
           </div>
           <div class="statistic">
-            <span><?= CurrencyFormatter::format($periodBudgetLeft, $code) ?></span>
+            <span><?= CurrencyFormatter::formatCodeFirst($periodBudgetLeft, $code) ?></span>
             <div class="title"><?= translate('period_budget', $i18n) ?> - <?= translate('budget_remaining', $i18n) ?></div>
             <div class="period-range"><?= $periodRangeLabel ?></div>
           </div>
@@ -428,7 +428,7 @@ $potentialMonthlySavings = get_upcoming_cancellations_monthly_value($upcomingCan
           if (isset($periodOverBudgetAmount)) {
             ?>
             <div class="statistic">
-              <span><?= CurrencyFormatter::format($periodOverBudgetAmount, $code) ?></span>
+              <span><?= CurrencyFormatter::formatCodeFirst($periodOverBudgetAmount, $code) ?></span>
               <div class="title"><?= translate('period_budget', $i18n) ?> - <?= translate('amount_over_budget', $i18n) ?></div>
               <div class="period-range"><?= $periodRangeLabel ?></div>
             </div>
@@ -444,7 +444,7 @@ $potentialMonthlySavings = get_upcoming_cancellations_monthly_value($upcomingCan
           <?php if ($showMonthlyStats && $showVsMonthlyBudgetGraph) { ?>
             <section class="graph">
               <header>
-                <?= translate('cost_vs_monthly_budget', $i18n) ?> (<?= CurrencyFormatter::format($monthlyBudget, $code) ?>)
+                <?= translate('cost_vs_monthly_budget', $i18n) ?> (<?= CurrencyFormatter::formatCodeFirst($monthlyBudget, $code) ?>)
                 <div class="sub-header">(<?= translate('monthly_cost', $i18n) ?>)</div>
               </header>
               <div id="monthlyBudgetVsCostChart" style="width: 100%;"></div>
@@ -453,7 +453,7 @@ $potentialMonthlySavings = get_upcoming_cancellations_monthly_value($upcomingCan
           <?php if ($showPeriodStats && $showVsPeriodBudgetGraph) { ?>
             <section class="graph">
               <header>
-                <?= translate('cost_vs_period_budget', $i18n) ?> (<?= CurrencyFormatter::format($periodBudget, $code) ?>)
+                <?= translate('cost_vs_period_budget', $i18n) ?> (<?= CurrencyFormatter::formatCodeFirst($periodBudget, $code) ?>)
                 <div class="sub-header">(<?= translate('amount_needed_this_period', $i18n) ?>)</div>
               </header>
               <div id="periodBudgetVsCostChart" style="width: 100%;"></div>
@@ -557,7 +557,7 @@ $potentialMonthlySavings = get_upcoming_cancellations_monthly_value($upcomingCan
           if ($totalLifetimeSpend > 0) {
             ?>
             <div class="statistic">
-              <span><?= CurrencyFormatter::format($totalLifetimeSpend, $code) ?></span>
+              <span><?= CurrencyFormatter::formatCodeFirst($totalLifetimeSpend, $code) ?></span>
               <div class="title"><?= translate('all_time_spend', $i18n) ?></div>
             </div>
             <?php
@@ -644,11 +644,11 @@ $potentialMonthlySavings = get_upcoming_cancellations_monthly_value($upcomingCan
         if ($potentialMonthlySavings > 0) {
           ?>
           <div class="statistic">
-            <span><?= CurrencyFormatter::format($potentialMonthlySavings, $code) ?></span>
+            <span><?= CurrencyFormatter::formatCodeFirst($potentialMonthlySavings, $code) ?></span>
             <div class="title"><?= translate('potential_monthly_savings', $i18n) ?></div>
           </div>
           <div class="statistic">
-            <span><?= CurrencyFormatter::format($potentialMonthlySavings * 12, $code) ?></span>
+            <span><?= CurrencyFormatter::formatCodeFirst($potentialMonthlySavings * 12, $code) ?></span>
             <div class="title"><?= translate('potential_yearly_savings', $i18n) ?></div>
           </div>
           <?php
@@ -672,11 +672,11 @@ $potentialMonthlySavings = get_upcoming_cancellations_monthly_value($upcomingCan
         if ($totalSavingsPerMonth > 0) {
           ?>
           <div class="statistic">
-            <span><?= CurrencyFormatter::format($totalSavingsPerMonth, $code) ?></span>
+            <span><?= CurrencyFormatter::formatCodeFirst($totalSavingsPerMonth, $code) ?></span>
             <div class="title"><?= translate('monthly_savings', $i18n) ?></div>
           </div>
           <div class="statistic">
-            <span><?= CurrencyFormatter::format($totalSavingsPerMonth * 12, $code) ?></span>
+            <span><?= CurrencyFormatter::formatCodeFirst($totalSavingsPerMonth * 12, $code) ?></span>
             <div class="title"><?= translate('yearly_savings', $i18n) ?></div>
           </div>
           <?php

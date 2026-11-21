@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Diamon usage",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Records time while you work on a matching subscription tab, and notices when a service confirms a cancellation you started from Diamon.",
   "permissions": ["tabs", "idle", "storage", "alarms", "scripting"],
   "host_permissions": ["http://*/*", "https://*/*"],

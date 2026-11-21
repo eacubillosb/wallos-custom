@@ -3,7 +3,12 @@
 <?php
 $minibotShow = isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true && !empty($userId);
 $minibotAiReady = false;
-if ($minibotShow) {
+// Whether Dia is awake is cached in the session for a few minutes, so most
+// pages need no database work for it. Saving AI settings clears the cache.
+$minibotCache = $_SESSION['minibot_ai_ready'] ?? null;
+if ($minibotShow && is_array($minibotCache) && ($minibotCache['until'] ?? 0) > time()) {
+  $minibotAiReady = !empty($minibotCache['ready']);
+} elseif ($minibotShow) {
   // Some pages close $db before the footer, so open a short-lived connection here.
   $minibotDb = null;
   try {
@@ -18,6 +23,7 @@ if ($minibotShow) {
         && !empty($minibotAiRow['enabled'])
         && trim((string) ($minibotAiRow['model'] ?? '')) !== '';
     }
+    $_SESSION['minibot_ai_ready'] = ['ready' => (bool) $minibotAiReady, 'until' => time() + 300];
   } catch (Throwable $minibotError) {
     $minibotAiReady = false;
   }
@@ -27,12 +33,16 @@ if ($minibotShow) {
 }
 if ($minibotShow) {
   require_once __DIR__ . '/dia_mascot.php';
+  // Set at login; consumed on the first page that shows Dia.
+  $minibotGreet = !empty($_SESSION['minibot_greet']);
+  unset($_SESSION['minibot_greet']);
   $minibotMood = $minibotAiReady ? 'idle' : 'sleeping';
 ?>
 
 <div class="diamon-minibot<?= $minibotAiReady ? '' : ' is-disabled' ?>" id="diamon-minibot"
   data-user-id="<?= (int) $userId ?>"
   data-ai-ready="<?= $minibotAiReady ? '1' : '0' ?>"
+  data-greet="<?= $minibotGreet ? '1' : '0' ?>"
   data-welcome="<?= htmlspecialchars(translate('minibot_welcome', $i18n), ENT_QUOTES, 'UTF-8') ?>"
   data-thinking="<?= htmlspecialchars(translate('minibot_thinking', $i18n), ENT_QUOTES, 'UTF-8') ?>"
   data-error="<?= htmlspecialchars(translate('minibot_error', $i18n), ENT_QUOTES, 'UTF-8') ?>"
@@ -94,6 +104,7 @@ if ($minibotShow) {
     <?= dia_mascot_svg(26, 'idle', 'diamon-minibot-bubble-avatar dia-static') ?>
   </template>
 </div>
+<script type="text/javascript" src="scripts/minibot-format.js?<?= $version ?>"></script>
 <script type="text/javascript" src="scripts/minibot.js?<?= $version ?>"></script>
 <?php } ?>
 

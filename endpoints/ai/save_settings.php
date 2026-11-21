@@ -67,6 +67,9 @@ if (in_array($aiType, ['ollama', 'openai-compatible'])) {
 // includes/ai_client.php and settings.php both take the first row they are
 // handed, so the account can go on talking to the provider and the key it just
 // replaced - after being told the new one was saved.
+// The footer caches whether Dia is awake; let the next page ask again.
+unset($_SESSION['minibot_ai_ready']);
+
 $stmt = $db->prepare("DELETE FROM ai_settings WHERE user_id = ?");
 $stmt->bindValue(1, $userId, SQLITE3_INTEGER);
 $deleted = $stmt->execute();
